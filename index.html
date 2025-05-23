@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <title>単層ルーレット（保存機能付き）</title>
+  <title>単層ルーレット（永続保存版）</title>
   <style>
     body{font-family:sans-serif;background:#f9fafb;margin:0;padding:2rem;line-height:1.6;}
     h1{font-size:1.5rem;font-weight:700;margin-bottom:1rem;}
@@ -16,11 +16,11 @@
   </style>
 </head>
 <body>
-  <h1>単層ルーレット（保存機能付き）</h1>
-  <p>▶️ <strong>項目</strong>をカンマまたは改行区切りで入力 → <em>更新</em></p>
-  <textarea id="itemInput"></textarea>
-  <br><button id="updateBtn">更新 & 保存</button>
-  <p class="note">※ ブラウザの <em>localStorage</em> に自動保存されるため、再読み込みしても入力が保持されます。</p>
+  <h1>単層ルーレット（永続保存版）</h1>
+  <p>▶️ <strong>項目</strong>をカンマ／改行で入力 → リアルタイム保存＆プレビュー</p>
+  <textarea id="itemInput" placeholder="例: 当日欠勤, 悪口を言う ..."></textarea>
+  <br><button id="updateBtn">手動リフレッシュ</button>
+  <p class="note">※ 入力内容は <em>localStorage</em> に <strong>自動保存</strong> されるため、ブラウザを閉じたり再起動しても保持されます。</p>
 
   <div id="wheelContainer"><canvas id="wheelCanvas" width="480" height="480"></canvas></div>
 
@@ -31,9 +31,21 @@
     const ctx=canvas.getContext('2d');
     const RADIUS=canvas.width/2;
 
-    // 初期ロード: saved data
+    // 1️⃣  初期ロード（保存があれば反映）
+    const inputEl=document.getElementById('itemInput');
     const saved=localStorage.getItem(STORAGE_KEY);
-    document.getElementById('itemInput').value=saved??'当日欠勤, 悪口を言う, マウントを取る, 高圧的な態度, できることでもやらない, 責任転嫁';
+    inputEl.value=saved??'当日欠勤, 悪口を言う, マウントを取る, 高圧的な態度, できることでもやらない, 責任転嫁';
+
+    // 2️⃣ 自動保存 + プレビュー更新（input イベントで毎回）
+    inputEl.addEventListener('input',()=>{
+      localStorage.setItem(STORAGE_KEY,inputEl.value);
+      drawWheel(getItems());
+    });
+
+    // 3️⃣ beforeunload セーフティ（念押し保存）
+    window.addEventListener('beforeunload',()=>{
+      localStorage.setItem(STORAGE_KEY,inputEl.value);
+    });
 
     function fitFont(label,maxPx){
       let size=16;ctx.font=`${size}px sans-serif`;
@@ -63,18 +75,14 @@
     }
 
     function getItems(){
-      return document.getElementById('itemInput').value.split(/[\n,]/).map(s=>s.trim()).filter(Boolean);
+      return inputEl.value.split(/[\n,]/).map(s=>s.trim()).filter(Boolean);
     }
 
-    function updateWheel(){
-      const raw=document.getElementById('itemInput').value;
-      localStorage.setItem(STORAGE_KEY,raw);
-      drawWheel(getItems());
-    }
+    // 手動リフレッシュボタン（必要に応じて）
+    document.getElementById('updateBtn').addEventListener('click',()=>drawWheel(getItems()));
 
-    document.getElementById('updateBtn').addEventListener('click',updateWheel);
     // 初期描画
-    updateWheel();
+    drawWheel(getItems());
   </script>
 </body>
 </html>
